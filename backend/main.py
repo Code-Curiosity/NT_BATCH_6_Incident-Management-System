@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.routes import incidents, alerts, websocket
+from app.routes import incidents, alerts, websocket, teams, users
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -30,6 +30,8 @@ app.add_middleware(
 # Include routers
 app.include_router(incidents.router, prefix="/api/incidents", tags=["Incidents"])
 app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
+app.include_router(teams.router, prefix="/api/teams", tags=["Teams"])
+app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(websocket.router, tags=["WebSocket"])
 
 

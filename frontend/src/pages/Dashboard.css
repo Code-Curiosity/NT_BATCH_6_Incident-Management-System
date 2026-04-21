@@ -90,6 +90,12 @@
   border-color: var(--color-accent);
 }
 
+.filter-select-wrapper select option {
+  background-color: var(--color-bg-card);
+  color: var(--color-text-primary);
+  padding: 8px;
+}
+
 .filter-tab {
   padding: 8px 18px;
   border-radius: var(--radius-sm);

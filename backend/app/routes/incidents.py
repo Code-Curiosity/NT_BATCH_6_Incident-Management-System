@@ -11,6 +11,8 @@ from typing import Optional
 from app.database import get_db
 from app.models.incident import Incident
 
+from app.services.assignment import get_team_head
+
 router = APIRouter()
 
 
@@ -20,7 +22,8 @@ class IncidentCreate(BaseModel):
     title: str
     description: Optional[str] = None
     severity: str
-    assigned_to: Optional[str] = None
+    team_id: Optional[int] = None
+    user_id: Optional[int] = None
     source: Optional[str] = None
 
 
@@ -28,16 +31,27 @@ class IncidentUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     severity: Optional[str] = None
-    assigned_to: Optional[str] = None
+    team_id: Optional[int] = None
+    user_id: Optional[int] = None
     source: Optional[str] = None
 
 
 # --- Endpoints ---
 
 @router.get("/")
-def get_all_incidents(db: Session = Depends(get_db)):
-    """Get all incidents, ordered by most recent first."""
-    incidents = db.query(Incident).order_by(Incident.created_at.desc()).all()
+def get_all_incidents(
+    team_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """Get all incidents, ordered by most recent first, with optional filtering."""
+    query = db.query(Incident)
+    if team_id:
+        query = query.filter(Incident.team_id == team_id)
+    if user_id:
+        query = query.filter(Incident.user_id == user_id)
+    
+    incidents = query.order_by(Incident.created_at.desc()).all()
     return [incident.to_dict() for incident in incidents]
 
 
@@ -58,7 +72,8 @@ def create_incident(data: IncidentCreate, db: Session = Depends(get_db)):
         description=data.description,
         severity=data.severity,
         status="new",
-        assigned_to=data.assigned_to,
+        team_id=data.team_id,
+        user_id=data.user_id,
         source=data.source,
     )
     db.add(incident)
@@ -83,11 +98,19 @@ def acknowledge_incident(incident_id: int, db: Session = Depends(get_db)):
 
 @router.patch("/{incident_id}/escalate")
 def escalate_incident(incident_id: int, db: Session = Depends(get_db)):
-    """Escalate an incident (status → escalated)."""
+    """Escalate an incident (status → escalated + move to team head)."""
     incident = db.query(Incident).filter(Incident.id == incident_id).first()
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
+    
     incident.status = "escalated"
+    
+    # Auto-assignment to team head on escalation
+    if incident.team_id:
+        head = get_team_head(incident.team_id, db)
+        if head:
+            incident.user_id = head.id
+            
     db.commit()
     db.refresh(incident)
     return incident.to_dict()

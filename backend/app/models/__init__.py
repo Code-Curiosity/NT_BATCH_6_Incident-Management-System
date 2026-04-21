@@ -1,3 +1,5 @@
 from app.models.incident import Incident
+from app.models.team import Team
+from app.models.user import User
 
-__all__ = ["Incident"]
+__all__ = ["Incident", "Team", "User"]
