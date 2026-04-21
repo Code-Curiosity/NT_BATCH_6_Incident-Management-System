@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
 from app.routes import incidents, alerts, websocket
+from app.models import incident, team, incident_log, user, alert
 
 # Create database tables
 Base.metadata.create_all(bind=engine)

@@ -24,9 +24,11 @@ def classify_alert(alert_data: dict) -> dict:
     if source == "infrastructure":
         severity = _classify_infrastructure_severity(alert_type)
         assigned_to = "DevOps Team"
+
     elif source == "application":
         severity = _classify_application_severity(alert_type)
         assigned_to = "Application Team"
+
     else:
         severity = "medium"
         assigned_to = "Unassigned"
@@ -39,28 +41,38 @@ def classify_alert(alert_data: dict) -> dict:
 
 
 def _classify_infrastructure_severity(alert_type: str) -> str:
-    """Classify infrastructure alert severity."""
+    """
+    Classify infrastructure alert severity.
+    """
+
     critical_keywords = ["down", "outage", "failure", "crash", "unreachable"]
     high_keywords = ["high cpu", "high memory", "disk full", "latency"]
 
     for keyword in critical_keywords:
         if keyword in alert_type:
             return "critical"
+
     for keyword in high_keywords:
         if keyword in alert_type:
             return "high"
+
     return "medium"
 
 
 def _classify_application_severity(alert_type: str) -> str:
-    """Classify application alert severity."""
+    """
+    Classify application alert severity.
+    """
+
     critical_keywords = ["unresponsive", "crash", "data loss"]
     high_keywords = ["error rate", "timeout", "exception"]
 
     for keyword in critical_keywords:
         if keyword in alert_type:
             return "critical"
+
     for keyword in high_keywords:
         if keyword in alert_type:
             return "high"
+
     return "low"
