@@ -1,44 +1,24 @@
-"""
-Database configuration and session management.
-Supports SQLite (default, zero-setup) and MySQL (for production/demo).
-
-To use SQLite (default):
-    DATABASE_URL=sqlite:///./incidents.db
-
-To use MySQL:
-    DATABASE_URL=mysql+pymysql://root:password@localhost:3306/incident_management
-"""
-"""
-Database configuration file.
-Handles connection to MySQL database using SQLAlchemy.
-"""
-
+import os
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
 
-# 🔴 CHANGE THESE VALUES
-USERNAME = "root"
-PASSWORD = "MYSQLROOT"
-HOST = "localhost"
-DATABASE = "NT_BATCH_6_Incident_Management_System"
+load_dotenv()
 
-DATABASE_URL = f"mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}"
+# We default to local sqlite if not provided, allowing zero-install dev
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./incidents.db")
 
-# Create engine
-engine = create_engine(DATABASE_URL)
+# For sqlite we need connect_args to prevent connection sharing issues
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
 
-# Create session
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Base class for models
 Base = declarative_base()
 
 def get_db():
-    """
-    Dependency for getting DB session.
-    Used by FastAPI routes.
-    """
     db = SessionLocal()
     try:
         yield db

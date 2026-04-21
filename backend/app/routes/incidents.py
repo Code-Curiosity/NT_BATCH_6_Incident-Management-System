@@ -1,129 +1,62 @@
-"""
-Incident API Routes.
-CRUD operations and status management for incidents.
-"""
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import Optional
+from datetime import datetime
 
 from app.database import get_db
-from app.models.incident import Incident
+from app.models import Incident, IncidentLog
+from app.routes.websocket import manager
 
 router = APIRouter()
 
-
-# --- Pydantic Schemas ---
-
-class IncidentCreate(BaseModel):
-    title: str
-    description: Optional[str] = None
-    severity: str
-    assigned_to: Optional[str] = None
-    source: Optional[str] = None
-
-
-class IncidentUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    severity: Optional[str] = None
-    assigned_to: Optional[str] = None
-    source: Optional[str] = None
-
-
-# --- Endpoints ---
-
 @router.get("/")
-def get_all_incidents(db: Session = Depends(get_db)):
-    """Get all incidents, ordered by most recent first."""
+def get_incidents(db: Session = Depends(get_db)):
     incidents = db.query(Incident).order_by(Incident.created_at.desc()).all()
-    return [incident.to_dict() for incident in incidents]
-
+    return {"incidents": [i.to_dict() for i in incidents]}
 
 @router.get("/{incident_id}")
 def get_incident(incident_id: int, db: Session = Depends(get_db)):
-    """Get a single incident by ID."""
     incident = db.query(Incident).filter(Incident.id == incident_id).first()
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
-    return incident.to_dict()
+    
+    logs = db.query(IncidentLog).filter(IncidentLog.incident_id == incident_id).all()
+    data = incident.to_dict()
+    data["logs"] = [{"action": l.action, "timestamp": l.timestamp.isoformat()} for l in logs]
+    return data
 
-
-@router.post("/", status_code=201)
-def create_incident(data: IncidentCreate, db: Session = Depends(get_db)):
-    """Create a new incident."""
-    incident = Incident(
-        title=data.title,
-        description=data.description,
-        severity=data.severity,
-        status="new",
-        assigned_to=data.assigned_to,
-        source=data.source,
-    )
-    db.add(incident)
+async def _update_status(incident_id: int, status: str, db: Session):
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+        
+    incident.status = status
+    if status == "RESOLVED":
+        incident.resolved_at = datetime.utcnow()
+        if incident.created_at:
+            delta = incident.resolved_at - incident.created_at
+            incident.resolution_time = int(delta.total_seconds())
+            
+    db.add(IncidentLog(incident_id=incident_id, action=status, details=f"Status changed to {status}"))
     db.commit()
     db.refresh(incident)
+    
+    await manager.broadcast({
+        "type": "STATUS_CHANGE",
+        "data": incident.to_dict()
+    })
     return incident.to_dict()
-
 
 @router.patch("/{incident_id}/acknowledge")
-def acknowledge_incident(incident_id: int, db: Session = Depends(get_db)):
-    """Acknowledge an incident (status: new → acknowledged)."""
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-    if incident.status != "new":
-        raise HTTPException(status_code=400, detail="Incident is not in 'new' status")
-    incident.status = "acknowledged"
-    db.commit()
-    db.refresh(incident)
-    return incident.to_dict()
-
+async def acknowledge_incident(incident_id: int, db: Session = Depends(get_db)):
+    return await _update_status(incident_id, "ACKNOWLEDGED", db)
 
 @router.patch("/{incident_id}/escalate")
-def escalate_incident(incident_id: int, db: Session = Depends(get_db)):
-    """Escalate an incident (status → escalated)."""
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-    incident.status = "escalated"
-    db.commit()
-    db.refresh(incident)
-    return incident.to_dict()
-
+async def escalate_incident(incident_id: int, db: Session = Depends(get_db)):
+    inc = db.query(Incident).filter(Incident.id == incident_id).first()
+    if inc:
+        inc.escalation_count += 1
+    return await _update_status(incident_id, "ESCALATED", db)
 
 @router.patch("/{incident_id}/resolve")
-def resolve_incident(incident_id: int, db: Session = Depends(get_db)):
-    """Resolve an incident (status → resolved)."""
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-    incident.status = "resolved"
-    db.commit()
-    db.refresh(incident)
-    return incident.to_dict()
-
-
-@router.put("/{incident_id}")
-def update_incident(incident_id: int, data: IncidentUpdate, db: Session = Depends(get_db)):
-    """Update incident details."""
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-    for field, value in data.model_dump(exclude_unset=True).items():
-        setattr(incident, field, value)
-    db.commit()
-    db.refresh(incident)
-    return incident.to_dict()
-
-
-@router.delete("/{incident_id}", status_code=204)
-def delete_incident(incident_id: int, db: Session = Depends(get_db)):
-    """Delete an incident."""
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-    db.delete(incident)
-    db.commit()
-    return None
+async def resolve_incident(incident_id: int, db: Session = Depends(get_db)):
+    return await _update_status(incident_id, "RESOLVED", db)

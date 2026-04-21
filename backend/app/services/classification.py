@@ -1,78 +1,105 @@
-"""
-Alert Classification Engine.
-Classifies incoming alerts by severity and routes them to the appropriate team.
-"""
+import google.generativeai as genai
+import json, os, re
 
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-1.5-flash")
 
-def classify_alert(alert_data: dict) -> dict:
-    """
-    Classify an incoming alert and determine severity + team assignment.
+# ── Fallback: Rule-based classifier ──────────────────────────────────────────
+TYPE_RULES = {
+    "SECURITY":       ["ssh", "brute force", "login attempt", "port scan", "certificate", "unauthorized", "suspicious", "attack", "firewall"],
+    "PLATFORM":       ["kubernetes", "pod crash", "k8s", "pipeline", "ci/cd", "jenkins", "build failed", "deploy", "namespace", "helm"],
+    "INFRASTRUCTURE": ["cpu", "disk", "memory", "oom", "server down", "database down", "network", "connection refused", "host down", "tcp", "db-prod"],
+    "APPLICATION":    ["error rate", "exception", "api", "endpoint", "response time", "slow query", "500", "4xx", "timeout", "service"],
+}
 
-    Args:
-        alert_data: Raw alert data with 'type', 'message', 'source' fields.
+SEVERITY_RULES = {
+    "CRITICAL": ["critical", "down", "outage", "crash", "connection refused", "oomkilled", "brute force", "unreachable"],
+    "HIGH":     ["high", "spike", "exceeded", "95%", "94%", "93%", "failed", "4200ms", "18%"],
+    "MEDIUM":   ["warning", "slow", "degraded", "elevated", "approaching threshold", "70%", "80%"],
+    "LOW":      ["info", "low", "minor", "informational", "notice"],
+}
 
-    Returns:
-        dict with 'severity', 'assigned_to', 'source' classification results.
-    """
-    alert_type = alert_data.get("type", "").lower()
-    source = alert_data.get("source", "unknown").lower()
+PRIORITY_MAP = {"CRITICAL": 95, "HIGH": 70, "MEDIUM": 40, "LOW": 15}
+SLA_MAP      = {"CRITICAL": 4,  "HIGH": 8,  "MEDIUM": 24, "LOW": 72}
 
-    # Classification rules
-    # Infrastructure alerts → higher severity, assigned to DevOps
-    # Application alerts → lower severity, assigned to App Team
+def _rule_based_classify(raw_message: str, source: str) -> dict:
+    msg = raw_message.lower()
 
-    if source == "infrastructure":
-        severity = _classify_infrastructure_severity(alert_type)
-        assigned_to = "DevOps Team"
+    incident_type = "APPLICATION"
+    for itype in ["SECURITY", "PLATFORM", "INFRASTRUCTURE", "APPLICATION"]:
+        if any(kw in msg for kw in TYPE_RULES[itype]):
+            incident_type = itype
+            break
 
-    elif source == "application":
-        severity = _classify_application_severity(alert_type)
-        assigned_to = "Application Team"
+    severity = "MEDIUM"
+    for sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW"]:
+        if any(kw in msg for kw in SEVERITY_RULES[sev]):
+            severity = sev
+            break
 
-    else:
-        severity = "medium"
-        assigned_to = "Unassigned"
+    services = []
+    for pattern in [r'\b[\w-]+-\d+\b', r'\b/api/[\w/]+\b', r'\b[\w-]+-service\b']:
+        services.extend(re.findall(pattern, raw_message)[:2])
+
+    title = re.sub(r'^\[?[A-Z]+\]?:?\s*', '', raw_message.split(".")[0].strip())[:80]
+    description = (
+        f"{incident_type.capitalize()} issue detected from {source}. "
+        f"Severity assessed as {severity} based on alert content."
+    )
 
     return {
+        "title": title,
+        "description": description,
         "severity": severity,
-        "assigned_to": assigned_to,
-        "source": source,
+        "incident_type": incident_type,
+        "affected_services": list(set(services))[:3] or [source],
+        "priority_score": PRIORITY_MAP[severity],
+        "sla_hours": SLA_MAP[severity],
     }
 
+# ── Primary: Gemini classifier ────────────────────────────────────────────────
+def classify_alert(raw_message: str, source: str) -> dict:
+    prompt = f"""You are a DevOps incident classification engine.
+Analyze this raw alert and return ONLY a valid JSON object. No markdown, no explanation.
 
-def _classify_infrastructure_severity(alert_type: str) -> str:
-    """
-    Classify infrastructure alert severity.
-    """
+Raw alert: {raw_message}
+Source system: {source}
 
-    critical_keywords = ["down", "outage", "failure", "crash", "unreachable"]
-    high_keywords = ["high cpu", "high memory", "disk full", "latency"]
+Return exactly this JSON structure:
+{{
+  "title": "short incident title under 80 chars",
+  "description": "2 sentence explanation of what is happening and likely impact",
+  "severity": "CRITICAL",
+  "incident_type": "INFRASTRUCTURE",
+  "affected_services": ["service1", "service2"],
+  "priority_score": 95,
+  "sla_hours": 4
+}}
 
-    for keyword in critical_keywords:
-        if keyword in alert_type:
-            return "critical"
+Severity must be one of: CRITICAL, HIGH, MEDIUM, LOW.
+Incident_type must be one of: INFRASTRUCTURE, APPLICATION, PLATFORM, SECURITY.
 
-    for keyword in high_keywords:
-        if keyword in alert_type:
-            return "high"
+Rules:
+- INFRASTRUCTURE: server down, disk full, memory OOM, network failure, database crash
+- APPLICATION: error rate spike, slow response, feature broken, failed deployment
+- PLATFORM: CI/CD pipeline failure, Kubernetes issues, cloud resource exhaustion
+- SECURITY: auth failures, suspicious logins, port scans, certificate expiry
+- CRITICAL = sla_hours 4, HIGH = 8, MEDIUM = 24, LOW = 72
+- priority_score: CRITICAL=90-100, HIGH=60-89, MEDIUM=30-59, LOW=1-29"""
 
-    return "medium"
-
-
-def _classify_application_severity(alert_type: str) -> str:
-    """
-    Classify application alert severity.
-    """
-
-    critical_keywords = ["unresponsive", "crash", "data loss"]
-    high_keywords = ["error rate", "timeout", "exception"]
-
-    for keyword in critical_keywords:
-        if keyword in alert_type:
-            return "critical"
-
-    for keyword in high_keywords:
-        if keyword in alert_type:
-            return "high"
-
-    return "low"
+    try:
+        response = model.generate_content(prompt)
+        text = response.text.strip().replace("```json", "").replace("```", "").strip()
+        result = json.loads(text)
+        
+        # Enforce valid fields just in case LLM drifts
+        if result.get("severity") not in ["CRITICAL", "HIGH", "MEDIUM", "LOW"]:
+            result["severity"] = "MEDIUM"
+            result["priority_score"] = 50
+        if result.get("incident_type") not in ["INFRASTRUCTURE", "APPLICATION", "PLATFORM", "SECURITY"]:
+            result["incident_type"] = "APPLICATION"
+            
+        return result
+    except Exception as e:
+        print(f"[Classifier] Gemini failed ({e}), using rule-based fallback")
+        return _rule_based_classify(raw_message, source)
