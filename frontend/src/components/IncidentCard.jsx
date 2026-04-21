@@ -20,8 +20,12 @@ function IncidentCard({ incident, onAction }) {
 
       <div className="card-meta">
         <div className="meta-item">
-          <span className="meta-label">Assigned</span>
-          <span className="meta-value">{assigned_to || 'Unassigned'}</span>
+          <span className="meta-label">Team</span>
+          <span className="meta-value">{incident.team_name || 'Unassigned'}</span>
+        </div>
+        <div className="meta-item">
+          <span className="meta-label">Assignee</span>
+          <span className="meta-value">{incident.user_name || 'Unassigned'}</span>
         </div>
         <div className="meta-item">
           <span className="meta-label">Source</span>

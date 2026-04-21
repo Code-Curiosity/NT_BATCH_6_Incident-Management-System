@@ -32,7 +32,17 @@
 
 /* ===== FILTER CONTROLS ===== */
 .dashboard-controls {
-  margin-bottom: 24px;
+  margin-bottom: 32px;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: var(--color-bg-card);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
 }
 
 .filter-tabs {
@@ -41,11 +51,50 @@
   flex-wrap: wrap;
 }
 
+.dropdown-filters {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.filter-select-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.filter-select-wrapper label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.filter-select-wrapper select {
+  background: var(--color-bg-body);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.filter-select-wrapper select:focus {
+  border-color: var(--color-accent);
+}
+
 .filter-tab {
   padding: 8px 18px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
-  background: transparent;
+  background: var(--color-bg-body);
   color: var(--color-text-secondary);
   font-size: 0.85rem;
   font-weight: 500;
