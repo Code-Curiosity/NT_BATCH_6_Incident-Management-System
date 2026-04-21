@@ -344,6 +344,302 @@ Full API docs: see `docs/API.md` or open `http://localhost:8000/docs` (Swagger U
 
 ---
 
+## 📖 What Every File Does (READ THIS TO UNDERSTAND THE CODE)
+
+### 🔧 `backend/main.py` — The Server Entry Point
+This is the starting file. When you run `uvicorn main:app`, it:
+- Creates the FastAPI app
+- Enables CORS (so frontend can talk to backend)
+- Registers all API routes (incidents, alerts, websocket)
+- Auto-creates database tables on startup
+
+**You should NOT edit this file** unless you're adding a new router.
+
+---
+
+### 🔧 `backend/app/database.py` — Database Connection
+This file connects to the database. It:
+- Reads `DATABASE_URL` from the `.env` file
+- Defaults to SQLite (a simple local file `incidents.db`)
+- Creates a `SessionLocal` factory for database sessions
+- Provides `get_db()` dependency used by all routes
+
+**How it works for you:** Just copy `.env.example` to `.env` and run the server. The database file is auto-created. If you need to reset, just delete `incidents.db`.
+
+---
+
+### 🔧 `backend/app/models/incident.py` — Database Table Schema
+This defines the **incidents table** in the database:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | Integer | Unique ID (auto-increment) |
+| `title` | String | Alert title (e.g., "server down") |
+| `description` | Text | Detailed description |
+| `severity` | String | `critical`, `high`, `medium`, `low` |
+| `status` | String | `new`, `acknowledged`, `escalated`, `resolved` |
+| `assigned_to` | String | Team name (e.g., "DevOps Team") |
+| `source` | String | `infrastructure` or `application` |
+| `created_at` | DateTime | When the incident was created |
+| `updated_at` | DateTime | When it was last modified |
+
+Has a `to_dict()` method that converts the model to JSON for API responses.
+
+---
+
+### 🔧 `backend/app/routes/incidents.py` — Incident API Endpoints
+The main CRUD API. Currently has scaffold endpoints for:
+- `GET /api/incidents/` — list all incidents
+- `GET /api/incidents/{id}` — get one
+- `POST /api/incidents/` — create new
+- `PATCH .../acknowledge` — change status to acknowledged
+- `PATCH .../escalate` — change status to escalated  
+- `PATCH .../resolve` — change status to resolved
+- `PUT /api/incidents/{id}` — update details
+- `DELETE /api/incidents/{id}` — delete
+
+**What needs to be built:** Better validation, error handling, filtering, sorting, pagination.
+
+---
+
+### 🔧 `backend/app/routes/alerts.py` — Alert Ingestion Pipeline
+This is the **event-driven entry point**. When an alert comes in:
+1. Receives raw alert data (`type`, `message`, `source`)
+2. Calls the classification engine to determine severity
+3. Auto-creates an incident in the database
+4. Returns the created incident + classification result
+
+**What needs to be built:** WebSocket broadcast after creating incident, batch alert ingestion, alert deduplication.
+
+---
+
+### 🔧 `backend/app/routes/websocket.py` — Real-Time Updates
+Manages WebSocket connections for the live dashboard:
+- `ConnectionManager` tracks all connected clients
+- `/ws` endpoint accepts WebSocket connections
+- `broadcast()` method sends updates to ALL connected clients
+
+**What needs to be built:** Actually call `manager.broadcast()` when incidents are created/updated inside the routes. Currently the WebSocket is set up but not wired to incident changes.
+
+---
+
+### 🔧 `backend/app/services/classification.py` — The Brain
+The classification engine that decides:
+- **Severity level** based on alert keywords (e.g., "server down" → critical)
+- **Team assignment** based on source (infrastructure → DevOps, application → App Team)
+
+**What needs to be built:** More classification rules, maybe ML-based classification, escalation timer logic.
+
+---
+
+### 🔧 `backend/app/services/notification.py` — Notifications (Stub)
+Currently just logs messages. Needs real integration with:
+- Email (SMTP or SendGrid)
+- Slack webhooks
+- SMS (Twilio)
+
+**This is a TODO** — build as time permits.
+
+---
+
+### 🎨 `frontend/src/index.css` — Design System
+All CSS variables (colors, fonts, spacing) are defined here. The dark theme uses:
+- Severity colors: red (critical), orange (high), yellow (medium), green (low)
+- Status colors: blue (new), yellow (acknowledged), red (escalated), green (resolved)
+- Font: Inter from Google Fonts
+
+**Frontend team:** Use these CSS variables (`var(--color-critical)`, etc.) everywhere. Don't hardcode colors.
+
+---
+
+### 🎨 `frontend/src/pages/Dashboard.jsx` — Main Dashboard Page
+- Fetches incidents from `/api/incidents/`
+- Shows stats bar (total, critical, open, resolved counts)
+- Filter tabs (all, new, acknowledged, escalated, resolved)
+- Renders incident cards in a grid
+- Handles acknowledge/escalate/resolve button clicks
+
+**What needs to be built:** WebSocket connection for real-time updates, auto-refresh, charts/analytics, better empty states.
+
+---
+
+### 🎨 `frontend/src/components/IncidentCard.jsx` — Incident Card
+Displays a single incident with:
+- Severity badge (colored pill)
+- Status badge
+- Title, description
+- Metadata (assigned team, source, created time)
+- Action buttons (acknowledge, escalate, resolve)
+
+**What needs to be built:** Click-to-expand details, timeline view, assignment dropdown.
+
+---
+
+### 🎨 `frontend/src/components/StatsBar.jsx` — Stats Overview
+Shows 4 stat cards: Total, Critical, Open, Resolved counts.
+
+**What needs to be built:** More stats (MTTR, trends), mini-charts, percentage changes.
+
+---
+
+### 🧪 `scripts/simulate_alerts.py` — Alert Simulator
+Sends 10 realistic sample alerts to the backend API:
+- Infrastructure: server down, DB failure, high CPU, disk full, etc.
+- Application: crash, error rate spike, timeouts, etc.
+
+Run this to populate your dashboard with test data.
+
+**What needs to be built:** Continuous alert generation (loop mode), random delays, more alert types.
+
+---
+
+### 🎨 `frontend/vite.config.js` — Vite Config
+Sets up:
+- React plugin
+- Dev server on port 5173
+- **API proxy**: All `/api/*` requests automatically forward to `http://localhost:8000`
+- **WebSocket proxy**: `/ws` forwards to `ws://localhost:8000`
+
+This means in your React code you can just write `fetch('/api/incidents/')` — it auto-goes to the backend. No need to worry about CORS or urls.
+
+---
+
+## 👑 TEAM LEAD WORKFLOW — Merging, Testing & Final Deploy
+
+> This section is for the **team lead only**. Teammates do NOT need to follow this.
+
+### Step 1: When a Teammate Creates a PR
+
+1. Go to GitHub → Pull Requests tab
+2. You'll see PRs targeting the `dev` branch
+3. **Review the code:**
+   - Does it follow the folder structure?
+   - Are they editing only their own files?
+   - Does the code look reasonable?
+   - Any obvious bugs or missing error handling?
+4. If looks good → **Merge the PR** on GitHub (click "Merge pull request")
+5. If issues → Comment on the PR and ask them to fix
+
+### Step 2: Pull PR Changes Locally for Testing
+
+After merging PRs on GitHub, pull the updated `dev` branch locally:
+
+```bash
+# Switch to dev branch
+git checkout dev
+
+# Pull the merged changes
+git pull origin dev
+```
+
+### Step 3: Test Integration on Your Machine
+
+```bash
+# Terminal 1 — Start Backend
+cd backend
+venv\Scripts\activate
+uvicorn main:app --reload --port 8000
+
+# Terminal 2 — Start Frontend
+cd frontend
+npm run dev
+
+# Terminal 3 — Run Alert Simulator
+cd backend
+python ../scripts/simulate_alerts.py
+```
+
+**Integration Test Checklist:**
+- [ ] Backend starts without errors
+- [ ] `http://localhost:8000/docs` shows Swagger UI
+- [ ] Frontend loads at `http://localhost:5173`
+- [ ] Running simulator creates incidents
+- [ ] Incidents appear on the dashboard
+- [ ] Filter tabs work
+- [ ] Acknowledge/escalate/resolve buttons work
+- [ ] Stats bar shows correct counts
+
+### Step 4: If Something Breaks After Merge
+
+**Option A — Quick fix yourself:**
+```bash
+# You're on dev branch, fix the issue
+# Edit the file
+git add .
+git commit -m "Fix: [describe what you fixed]"
+git push origin dev
+```
+
+**Option B — Revert the bad merge:**
+```bash
+git revert HEAD
+git push origin dev
+```
+Then tell the teammate to fix their code and re-submit their PR.
+
+### Step 5: Integration Testing Schedule
+
+Do this **every 3-4 hours** during the hackathon:
+
+```
+Hour 4:  First merge round → test backend + frontend connection
+Hour 8:  Second merge round → test WebSocket + real-time features
+Hour 12: Third merge round → test full flow end-to-end
+Hour 16: Final merge round → bug fixes + polish
+```
+
+### Step 6: Final Push to Main (Before Demo)
+
+Only when EVERYTHING works on `dev`:
+
+```bash
+# Make sure dev is up to date
+git checkout dev
+git pull origin dev
+
+# Switch to main
+git checkout main
+git pull origin main
+
+# Merge dev into main
+git merge dev -m "Final integration: merge dev into main for demo"
+
+# Push to main
+git push origin main
+```
+
+### Step 7: Final Demo Prep
+
+```bash
+# On main branch, do a clean test
+git checkout main
+
+# Backend
+cd backend
+venv\Scripts\activate
+uvicorn main:app --reload --port 8000
+
+# Frontend (new terminal)
+cd frontend
+npm run dev
+
+# Simulate alerts (new terminal)
+python scripts/simulate_alerts.py
+```
+
+**Demo flow to show judges:**
+1. Show the dashboard (empty state)
+2. Run the simulator → watch incidents appear in real-time
+3. Show severity classification (critical vs low)
+4. Show team assignment (DevOps vs App Team)
+5. Acknowledge an incident → status changes
+6. Escalate an incident → status changes
+7. Resolve an incident → moves to resolved
+8. Show stats bar updating
+9. Walk through the code architecture briefly
+
+---
+
 ## ⏰ Hackathon Timeline Suggestion
 
 | Time Block | Focus |
