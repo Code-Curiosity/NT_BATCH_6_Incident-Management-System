@@ -1,8 +1,7 @@
-import google.generativeai as genai
 import json, os, re
+from google import genai
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-flash")
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # ── Fallback: Rule-based classifier ──────────────────────────────────────────
 TYPE_RULES = {
@@ -88,7 +87,10 @@ Rules:
 - priority_score: CRITICAL=90-100, HIGH=60-89, MEDIUM=30-59, LOW=1-29"""
 
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
         text = response.text.strip().replace("```json", "").replace("```", "").strip()
         result = json.loads(text)
         

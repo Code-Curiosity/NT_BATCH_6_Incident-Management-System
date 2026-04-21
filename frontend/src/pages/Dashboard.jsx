@@ -43,12 +43,14 @@ function Dashboard() {
       const response = await fetch(url);
       const data = await response.json();
       
+      const fetchedIncidents = data.incidents || data;
+      
       // Client-side filtering for status since we already have the data
       // or we could add status to the API. For now, let's keep status filtering client-side
       // to avoid over-complicating the backend query logic if not needed.
       const statusFiltered = filter === 'all' 
-        ? data 
-        : data.filter(inc => inc.status === filter);
+        ? fetchedIncidents 
+        : fetchedIncidents.filter(inc => inc.status.toLowerCase() === filter.toLowerCase() || inc.status.toLowerCase() === (filter === 'new' ? 'open' : filter));
         
       setIncidents(statusFiltered);
     } catch (error) {
@@ -144,6 +146,8 @@ function Dashboard() {
               key={incident.id}
               incident={incident}
               onAction={handleAction}
+              teams={teams}
+              users={users}
             />
           ))
         )}
