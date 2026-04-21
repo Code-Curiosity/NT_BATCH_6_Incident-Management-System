@@ -1,0 +1,77 @@
+/* ===== DESIGN SYSTEM TOKENS ===== */
+:root {
+  /* Colors */
+  --color-bg-primary: #0f0f13;
+  --color-bg-secondary: #1a1a24;
+  --color-bg-card: #22222e;
+  --color-bg-hover: #2a2a3a;
+  --color-border: #2e2e40;
+
+  --color-text-primary: #f0f0f5;
+  --color-text-secondary: #9898b0;
+  --color-text-muted: #6e6e86;
+
+  /* Severity Colors */
+  --color-critical: #ff4d6a;
+  --color-critical-bg: rgba(255, 77, 106, 0.12);
+  --color-high: #ff9f43;
+  --color-high-bg: rgba(255, 159, 67, 0.12);
+  --color-medium: #ffc048;
+  --color-medium-bg: rgba(255, 192, 72, 0.12);
+  --color-low: #54d9a8;
+  --color-low-bg: rgba(84, 217, 168, 0.12);
+
+  /* Status Colors */
+  --color-new: #6c8cff;
+  --color-new-bg: rgba(108, 140, 255, 0.12);
+  --color-acknowledged: #ffc048;
+  --color-acknowledged-bg: rgba(255, 192, 72, 0.12);
+  --color-escalated: #ff4d6a;
+  --color-escalated-bg: rgba(255, 77, 106, 0.12);
+  --color-resolved: #54d9a8;
+  --color-resolved-bg: rgba(84, 217, 168, 0.12);
+
+  /* Accent */
+  --color-accent: #6c8cff;
+  --color-accent-hover: #8ba4ff;
+
+  /* Typography */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Spacing */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* Shadows */
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.3);
+  --shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* ===== GLOBAL RESET ===== */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  font-family: var(--font-family);
+}

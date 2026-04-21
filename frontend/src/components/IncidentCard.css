@@ -1,0 +1,135 @@
+/* ===== INCIDENT CARD ===== */
+.incident-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  transition: all 0.25s ease;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.incident-card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+  border-color: var(--color-bg-hover);
+}
+
+/* Left border accent by severity */
+.incident-card.severity-critical { border-left: 3px solid var(--color-critical); }
+.incident-card.severity-high { border-left: 3px solid var(--color-high); }
+.incident-card.severity-medium { border-left: 3px solid var(--color-medium); }
+.incident-card.severity-low { border-left: 3px solid var(--color-low); }
+
+/* ===== HEADER ROW ===== */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ===== BADGES ===== */
+.severity-badge,
+.status-badge {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.severity-badge.critical { background: var(--color-critical-bg); color: var(--color-critical); }
+.severity-badge.high { background: var(--color-high-bg); color: var(--color-high); }
+.severity-badge.medium { background: var(--color-medium-bg); color: var(--color-medium); }
+.severity-badge.low { background: var(--color-low-bg); color: var(--color-low); }
+
+.status-badge.new { background: var(--color-new-bg); color: var(--color-new); }
+.status-badge.acknowledged { background: var(--color-acknowledged-bg); color: var(--color-acknowledged); }
+.status-badge.escalated { background: var(--color-escalated-bg); color: var(--color-escalated); }
+.status-badge.resolved { background: var(--color-resolved-bg); color: var(--color-resolved); }
+
+/* ===== CARD BODY ===== */
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.card-description {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+/* ===== META INFO ===== */
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.meta-label {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.meta-value {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+/* ===== ACTION BUTTONS ===== */
+.card-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.action-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.action-btn.acknowledge {
+  color: var(--color-acknowledged);
+  border-color: var(--color-acknowledged);
+}
+.action-btn.acknowledge:hover {
+  background: var(--color-acknowledged-bg);
+}
+
+.action-btn.escalate {
+  color: var(--color-critical);
+  border-color: var(--color-critical);
+}
+.action-btn.escalate:hover {
+  background: var(--color-critical-bg);
+}
+
+.action-btn.resolve {
+  color: var(--color-resolved);
+  border-color: var(--color-resolved);
+}
+.action-btn.resolve:hover {
+  background: var(--color-resolved-bg);
+}
