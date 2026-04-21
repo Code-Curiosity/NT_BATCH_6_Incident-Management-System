@@ -4,8 +4,8 @@ Provides real-time updates to the frontend dashboard.
 """
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from typing import List
-import json
+from anyio import from_thread
+from typing import List, Optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -23,22 +23,57 @@ class ConnectionManager:
         await websocket.accept()
         self.active_connections.append(websocket)
         logger.info(f"Client connected. Total connections: {len(self.active_connections)}")
+        await websocket.send_json({"type": "connection", "status": "connected"})
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-        logger.info(f"Client disconnected. Total connections: {len(self.active_connections)}")
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+            logger.info(f"Client disconnected. Total connections: {len(self.active_connections)}")
 
     async def broadcast(self, message: dict):
         """Send a message to all connected clients."""
-        for connection in self.active_connections:
+        stale_connections: List[WebSocket] = []
+        for connection in list(self.active_connections):
             try:
                 await connection.send_json(message)
             except Exception:
-                pass
+                stale_connections.append(connection)
+
+        for connection in stale_connections:
+            self.disconnect(connection)
 
 
 # Global connection manager instance
 manager = ConnectionManager()
+
+
+async def broadcast_incident_event(
+    event_type: str,
+    incident: Optional[dict] = None,
+    incident_id: Optional[int] = None,
+):
+    """Broadcast a normalized incident event to connected clients."""
+    message = {"type": event_type}
+    if incident is not None:
+        message["incident"] = incident
+    if incident_id is not None:
+        message["incident_id"] = incident_id
+    await manager.broadcast(message)
+
+
+def queue_incident_event(
+    event_type: str,
+    incident: Optional[dict] = None,
+    incident_id: Optional[int] = None,
+):
+    """Bridge sync API routes to the async websocket broadcaster."""
+    try:
+        from_thread.run(broadcast_incident_event, event_type, incident, incident_id)
+    except RuntimeError:
+        logger.warning(
+            "Skipped websocket broadcast for %s because no request event loop was available.",
+            event_type,
+        )
 
 
 @router.websocket("/ws")

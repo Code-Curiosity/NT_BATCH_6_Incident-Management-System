@@ -10,6 +10,7 @@ from typing import Optional
 
 from app.database import get_db
 from app.models.incident import Incident
+from app.routes.websocket import queue_incident_event
 from app.services.classification import classify_alert
 
 router = APIRouter()
@@ -43,6 +44,7 @@ def ingest_alert(alert: AlertInput, db: Session = Depends(get_db)):
     db.add(incident)
     db.commit()
     db.refresh(incident)
+    queue_incident_event("incident_created", incident=incident.to_dict())
 
     return {
         "message": "Alert ingested and incident created",

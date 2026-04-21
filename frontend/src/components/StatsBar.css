@@ -2,48 +2,156 @@
 .stats-bar {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
 }
 
+/* ===== STAT CARD ===== */
 .stat-card {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 20px;
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  transition: transform 0.2s ease;
+  align-items: flex-start;
+  gap: var(--space-2);
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
+/* 🔥 TOP GRADIENT LINE */
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* ✨ SUBTLE GLOW BACKGROUND */
+.stat-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, rgba(255,255,255,0.06), transparent 60%);
+  pointer-events: none;
+}
+
+/* ✨ HOVER EFFECT */
 .stat-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: #2a3045;
 }
 
+/* ===== VALUE TEXT ===== */
 .stat-value {
-  font-size: 2rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-family: 'Space Mono', monospace;
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin: 0;
 }
 
+/* ===== LABEL TEXT ===== */
 .stat-label {
   font-size: 0.75rem;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   font-weight: 600;
+  margin: 0;
 }
 
-/* Stat color accents */
+/* ===== ICON (BACKGROUND STYLE) ===== */
+.stat-icon {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-size: 32px;
+  opacity: 0.1;
+}
+
+/* ===== COLOR ACCENTS ===== */
 .stat-total .stat-value { color: var(--color-accent); }
 .stat-critical .stat-value { color: var(--color-critical); }
-.stat-open .stat-value { color: var(--color-high); }
+.stat-open .stat-value { color: var(--color-warning); }
 .stat-resolved .stat-value { color: var(--color-resolved); }
 
+/* ===== TOP BORDER GRADIENTS ===== */
+.stat-total::before {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.stat-critical::before {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.stat-open::before {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.stat-resolved::before {
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+
+/* ===== SUBTLE BACKGROUND GRADIENTS ===== */
+.stat-total {
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-card) 0%,
+    rgba(59, 130, 246, 0.03) 100%
+  );
+}
+
+.stat-critical {
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-card) 0%,
+    rgba(239, 68, 68, 0.03) 100%
+  );
+}
+
+.stat-open {
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-card) 0%,
+    rgba(245, 158, 11, 0.03) 100%
+  );
+}
+
+.stat-resolved {
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-card) 0%,
+    rgba(34, 197, 94, 0.03) 100%
+  );
+}
+
+/* ===== RESPONSIVE ===== */
 @media (max-width: 640px) {
   .stats-bar {
     grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  .stat-card {
+    padding: var(--space-4);
+  }
+
+  .stat-value {
+    font-size: 1.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-bar {
+    grid-template-columns: 1fr;
   }
 }

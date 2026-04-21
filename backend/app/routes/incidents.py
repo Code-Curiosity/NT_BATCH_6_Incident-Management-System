@@ -10,6 +10,7 @@ from typing import Optional
 
 from app.database import get_db
 from app.models.incident import Incident
+from app.routes.websocket import queue_incident_event
 
 router = APIRouter()
 
@@ -64,6 +65,7 @@ def create_incident(data: IncidentCreate, db: Session = Depends(get_db)):
     db.add(incident)
     db.commit()
     db.refresh(incident)
+    queue_incident_event("incident_created", incident=incident.to_dict())
     return incident.to_dict()
 
 
@@ -78,6 +80,7 @@ def acknowledge_incident(incident_id: int, db: Session = Depends(get_db)):
     incident.status = "acknowledged"
     db.commit()
     db.refresh(incident)
+    queue_incident_event("incident_updated", incident=incident.to_dict())
     return incident.to_dict()
 
 
@@ -90,6 +93,7 @@ def escalate_incident(incident_id: int, db: Session = Depends(get_db)):
     incident.status = "escalated"
     db.commit()
     db.refresh(incident)
+    queue_incident_event("incident_updated", incident=incident.to_dict())
     return incident.to_dict()
 
 
@@ -102,6 +106,7 @@ def resolve_incident(incident_id: int, db: Session = Depends(get_db)):
     incident.status = "resolved"
     db.commit()
     db.refresh(incident)
+    queue_incident_event("incident_updated", incident=incident.to_dict())
     return incident.to_dict()
 
 
@@ -115,6 +120,7 @@ def update_incident(incident_id: int, data: IncidentUpdate, db: Session = Depend
         setattr(incident, field, value)
     db.commit()
     db.refresh(incident)
+    queue_incident_event("incident_updated", incident=incident.to_dict())
     return incident.to_dict()
 
 
@@ -124,6 +130,8 @@ def delete_incident(incident_id: int, db: Session = Depends(get_db)):
     incident = db.query(Incident).filter(Incident.id == incident_id).first()
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
+    deleted_incident_id = incident.id
     db.delete(incident)
     db.commit()
+    queue_incident_event("incident_deleted", incident_id=deleted_incident_id)
     return None
