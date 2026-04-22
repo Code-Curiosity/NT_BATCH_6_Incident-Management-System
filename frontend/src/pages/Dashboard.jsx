@@ -25,6 +25,43 @@ function Dashboard() {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
+  // WebSocket connection for real-time updates
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:8000/ws');
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+
+        if (msg.type === 'NEW_INCIDENT' && msg.data) {
+          // Prepend new incident to the top of the list
+          setIncidents((prev) => {
+            const exists = prev.some((i) => i.id === msg.data.id);
+            if (exists) return prev;
+            return [msg.data, ...prev];
+          });
+        }
+
+        if (msg.type === 'STATUS_CHANGE' && msg.data) {
+          // Replace the updated incident in-place
+          setIncidents((prev) =>
+            prev.map((i) => (i.id === msg.data.id ? msg.data : i))
+          );
+          // Also update sidebar if this incident is currently open
+          setSelectedIncident((prev) =>
+            prev && prev.id === msg.data.id ? msg.data : prev
+          );
+        }
+      } catch (e) {
+        console.error('WebSocket message parse error:', e);
+      }
+    };
+
+    ws.onerror = (err) => console.error('WebSocket error:', err);
+
+    return () => ws.close();
+  }, []);
+
   useEffect(() => {
     fetchInitialData();
   }, []);
