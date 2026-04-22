@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from app.database import get_db
+from app.models.incident import Incident
+from app.routes.websocket import queue_incident_event
 from app.models import Alert, Incident
 from app.services.classification import classify_alert
 from app.services.assignment import try_assign_incident
@@ -55,6 +57,7 @@ async def ingest_alert(payload: AlertPayload, background_tasks: BackgroundTasks,
     db.add(incident)
     db.commit()
     db.refresh(incident)
+    queue_incident_event("incident_created", incident=incident.to_dict())
 
     # 4. Smart Assignment
     assigned = try_assign_incident(db, incident.id, team_id)

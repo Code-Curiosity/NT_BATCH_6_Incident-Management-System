@@ -2,23 +2,24 @@ import './StatsBar.css';
 
 function StatsBar({ incidents }) {
   const total = incidents.length;
-  const critical = incidents.filter((i) => i.severity === 'critical').length;
-  const open = incidents.filter((i) => i.status !== 'resolved').length;
-  const resolved = incidents.filter((i) => i.status === 'resolved').length;
+  const critical = incidents.filter((incident) => incident.severity === 'critical').length;
+  const open = incidents.filter((incident) => incident.status !== 'resolved').length;
+  const resolved = incidents.filter((incident) => incident.status === 'resolved').length;
 
   const stats = [
-    { label: 'Total', value: total, className: 'stat-total' },
-    { label: 'Critical', value: critical, className: 'stat-critical' },
-    { label: 'Open', value: open, className: 'stat-open' },
-    { label: 'Resolved', value: resolved, className: 'stat-resolved' },
+    { label: 'Total Incidents', value: total, className: 'stat-total', icon: '\uD83D\uDCCB' },
+    { label: 'Critical Active', value: critical, className: 'stat-critical', icon: '\u26A0\uFE0F' },
+    { label: 'Open / Active', value: open, className: 'stat-open', icon: '\u23F1\uFE0F' },
+    { label: 'Resolved Today', value: resolved, className: 'stat-resolved', icon: '\u2705' },
   ];
 
   return (
     <div className="stats-bar">
       {stats.map((stat) => (
         <div key={stat.label} className={`stat-card ${stat.className}`}>
-          <span className="stat-value">{stat.value}</span>
-          <span className="stat-label">{stat.label}</span>
+          <div className="stat-icon">{stat.icon}</div>
+          <div className="stat-value">{stat.value}</div>
+          <div className="stat-label">{stat.label}</div>
         </div>
       ))}
     </div>

@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import IncidentCard from '../components/IncidentCard.jsx';
+import IncidentDetailsSidebar from '../components/IncidentDetailsSidebar.jsx';
 import StatsBar from '../components/StatsBar.jsx';
+import SideBar from '../components/SideBar.jsx';
 import './Dashboard.css';
 
 function Dashboard() {
@@ -63,7 +65,7 @@ function Dashboard() {
   const handleAction = async (incidentId, action) => {
     try {
       await fetch(`/api/incidents/${incidentId}/${action}`, { method: 'PATCH' });
-      fetchIncidents(); // Refresh after action
+      fetchIncidents();
     } catch (error) {
       console.error(`Failed to ${action} incident:`, error);
     }
@@ -133,6 +135,32 @@ function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* GRID */}
+        <main className="incident-grid">
+          {loading ? (
+            <div className="loading-state">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="incident-card skeleton"></div>
+              ))}
+            </div>
+          ) : filteredAndSortedIncidents.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">📋</div>
+              <h3>No incidents found</h3>
+              <p>Try adjusting your filters or search.</p>
+            </div>
+          ) : (
+            filteredAndSortedIncidents.map((incident) => (
+              <IncidentCard
+                key={incident.id}
+                incident={incident}
+                onAction={handleAction}
+                onViewDetails={setSelectedIncident}   // ✅ FIXED
+              />
+            ))
+          )}
+        </main>
       </div>
 
       <main className="incident-grid">

@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 from app.database import get_db
+from app.models.incident import Incident
+from app.routes.websocket import queue_incident_event
 from app.models import Incident, IncidentLog
 from app.routes.websocket import manager
 
@@ -51,6 +53,56 @@ async def acknowledge_incident(incident_id: int, db: Session = Depends(get_db)):
     return await _update_status(incident_id, "ACKNOWLEDGED", db)
 
 @router.patch("/{incident_id}/escalate")
+def escalate_incident(incident_id: int, db: Session = Depends(get_db)):
+    """Escalate an incident (status → escalated)."""
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    incident.status = "escalated"
+    db.commit()
+    db.refresh(incident)
+    queue_incident_event("incident_updated", incident=incident.to_dict())
+    return incident.to_dict()
+
+
+@router.patch("/{incident_id}/resolve")
+def resolve_incident(incident_id: int, db: Session = Depends(get_db)):
+    """Resolve an incident (status → resolved)."""
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    incident.status = "resolved"
+    db.commit()
+    db.refresh(incident)
+    queue_incident_event("incident_updated", incident=incident.to_dict())
+    return incident.to_dict()
+
+
+@router.put("/{incident_id}")
+def update_incident(incident_id: int, data: IncidentUpdate, db: Session = Depends(get_db)):
+    """Update incident details."""
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(incident, field, value)
+    db.commit()
+    db.refresh(incident)
+    queue_incident_event("incident_updated", incident=incident.to_dict())
+    return incident.to_dict()
+
+
+@router.delete("/{incident_id}", status_code=204)
+def delete_incident(incident_id: int, db: Session = Depends(get_db)):
+    """Delete an incident."""
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    deleted_incident_id = incident.id
+    db.delete(incident)
+    db.commit()
+    queue_incident_event("incident_deleted", incident_id=deleted_incident_id)
+    return None
 async def escalate_incident(incident_id: int, db: Session = Depends(get_db)):
     inc = db.query(Incident).filter(Incident.id == incident_id).first()
     if inc:
