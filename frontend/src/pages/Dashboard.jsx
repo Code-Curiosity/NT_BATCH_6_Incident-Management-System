@@ -183,6 +183,7 @@ function Dashboard() {
         {selectedIncident && (
           <IncidentDetailsSidebar
             incident={selectedIncident}
+            users={users}
             onClose={() => setSelectedIncident(null)}
           />
         )}

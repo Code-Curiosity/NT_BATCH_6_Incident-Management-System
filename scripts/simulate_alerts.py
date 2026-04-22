@@ -69,6 +69,47 @@ SAMPLE_ALERTS = [
         "source": "application",
         "metadata": {"endpoint": "/api/v1/users", "client_version": "2.1"},
     },
+    # Security - Critical
+    {
+        "type": "multiple unauthorized access attempts",
+        "message": "Detected 500+ failed login attempts from IP 192.168.1.100 targeting admin accounts.",
+        "source": "security",
+        "metadata": {"ip": "192.168.1.100", "target": "admin"},
+    },
+    # Security - High
+    {
+        "type": "ssl certificate expiring",
+        "message": "Primary domain SSL certificate will expire in less than 24 hours.",
+        "source": "security",
+        "metadata": {"domain": "api.prod.com", "days_left": 1},
+    },
+    # Platform - Critical
+    {
+        "type": "kubernetes cluster failure",
+        "message": "Kubelet not ready on 5 production nodes. Cluster scheduling degraded.",
+        "source": "platform",
+        "metadata": {"cluster": "prod-k8s", "nodes_failed": 5},
+    },
+    # Platform - High
+    {
+        "type": "pipeline build failed",
+        "message": "Jenkins master pipeline failed on integration tests for the last 3 runs.",
+        "source": "platform",
+        "metadata": {"pipeline": "core-backend", "consecutive_failures": 3},
+    },
+    {
+        "type": "container crash loop",
+        "message": "Pod redis-cache-0 is in CrashLoopBackOff state.",
+        "source": "platform",
+        "metadata": {"pod": "redis-cache-0", "namespace": "cache"},
+    },
+    # Infrastructure - Low
+    {
+        "type": "high log generation rate",
+        "message": "Informational: log ingestion rate has increased by 15%, check application verbosity.",
+        "source": "infrastructure",
+        "metadata": {"service": "ELK-stack"},
+    }
 ]
 
 def send_alert(alert):

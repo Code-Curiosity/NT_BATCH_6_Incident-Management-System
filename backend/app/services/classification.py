@@ -40,7 +40,9 @@ def _rule_based_classify(raw_message: str, source: str) -> dict:
     for pattern in [r'\b[\w-]+-\d+\b', r'\b/api/[\w/]+\b', r'\b[\w-]+-service\b']:
         services.extend(re.findall(pattern, raw_message)[:2])
 
-    title = re.sub(r'^\[?[A-Z]+\]?:?\s*', '', raw_message.split(".")[0].strip())[:80]
+    title = raw_message.split(".")[0].strip()
+    title = re.sub(r'^Type:\s*', '', title, flags=re.IGNORECASE)
+    title = re.sub(r'^\[?[A-Z]+\]?:?\s*', '', title).strip()[:80]
     description = (
         f"{incident_type.capitalize()} issue detected from {source}. "
         f"Severity assessed as {severity} based on alert content."

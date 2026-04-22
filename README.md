@@ -4,7 +4,7 @@
 
 This project is a simplified **Event-Driven Incident Management System** built to simulate how modern DevOps teams detect, classify, and resolve system incidents in real-time.
 
-The system processes incoming alerts, converts them into structured incidents, assigns them to relevant teams, and tracks their lifecycle through a live dashboard.
+The system processes incoming alerts, utilizes Google Gemini AI to classify them into structured incidents, rigorously balances active assignment workloads, and auto-escalates critical alerts when engineers fail to acknowledge them.
 
 ---
 
@@ -22,9 +22,9 @@ Our solution demonstrates:
 
 ## ⚙️ Core Features
 
-### 🔹 Alert Ingestion
+### 🔹 AI-Powered Alert Ingestion
 
-* Simulated alerts (e.g., server down, high CPU usage, app errors)
+* Simulated alerts are instantly processed via Google Gemini 2.5 Flash to automatically detect severity, classify infrastructure issues, and write human-readable incident summaries.
 
 ### 🔹 Classification & Routing
 
@@ -32,10 +32,12 @@ Our solution demonstrates:
 
   * Critical
   * Low
-* Automatically assigns incidents to:
+* Automatically balances workloads and assigns incidents to the least busy engineer across 4 primary teams:
 
-  * DevOps Team (infrastructure issues)
-  * Application Team (app-level issues)
+  * Infrastructure Team
+  * Application Team
+  * Platform Team
+  * Security Team
 
 ### 🔹 Incident Lifecycle
 
@@ -44,6 +46,11 @@ Each incident progresses through:
 ```text
 NEW → ACKNOWLEDGED → RESOLVED
 ```
+
+### 🔹 Auto-Escalation & 3-Strike Failsafe
+
+* If a critical incident goes unacknowledged for 2 minutes, it is auto-escalated and rerouted.
+* If it fails 3 assignments, a hard failsafe forcefully assigns it to the least busy engineer and auto-acknowledges it.
 
 ### 🔹 Dashboard (UI)
 
@@ -73,9 +80,9 @@ NEW → ACKNOWLEDGED → RESOLVED
         ↓
 [FastAPI Backend]
         ↓
-[Classification Engine]
+[Gemini AI Classification]
         ↓
-[MySQL Database]
+[SQLite Database]
         ↓
 [WebSocket Layer]
         ↓
@@ -86,12 +93,13 @@ NEW → ACKNOWLEDGED → RESOLVED
 
 ## 🧰 Tech Stack
 
-| Layer    | Technology           |
-| -------- | -------------------- |
-| Backend  | FastAPI (Python)     |
-| Frontend | React + Tailwind CSS |
-| Database | MySQL                |
-| Realtime | WebSockets           |
+| Layer       | Technology                   |
+| ----------- | ---------------------------- |
+| **Backend** | FastAPI, Python Background Threads |
+| **Frontend**| React 18 + Vanilla CSS       |
+| **Database**| SQLite via SQLAlchemy ORM    |
+| **AI Block**| Google Gemini 2.5 Flash SDK  |
+| **Realtime**| WebSockets                   |
 
 ---
 
@@ -142,16 +150,35 @@ NEW → ACKNOWLEDGED → RESOLVED
 
 ```bash
 cd backend
+python -m venv venv
+.\venv\Scripts\activate   # (Windows)
+# source venv/bin/activate # (Mac/Linux)
+
 pip install -r requirements.txt
-uvicorn main:app --reload
 ```
 
-### Frontend
+Create a `.env` file in the `backend/` directory:
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
 
+Start the Backend Server:
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+### 2. Frontend Setup
+Open a second terminal and navigate to the frontend directory:
 ```bash
 cd frontend
 npm install
 npm run dev
+```
+
+### 3. Simulate Ingestion (Live Demo)
+Open a third terminal and inject the mock alert payloads to watch the AI Engine classifying workloads in real-time:
+```bash
+python scripts/simulate_alerts.py
 ```
 
 ---
@@ -179,13 +206,10 @@ We focused on:
 
 ## 🔮 Future Enhancements
 
-* SLA tracking and alerts
-* Incident analytics (MTTR, trends)
-* Notification integration (Email/SMS/Slack)
-* Role-based access control
+*   **Notification Integrations:** Connect the `notification.py` stub pipelines to real-world Twilio (SMS), SendGrid (Email), or Slack Webhooks for true out-of-band alerts.
+*   **PostgreSQL Migration:** Transition from the local lightweight SQLite layer to a robust distributed Postgres database.
+*   **Docker Containerization:** Wrap both the frontend and backend architectures into multi-container Docker deployments for 1-click cloud launching.
+*   **Custom Alert Rules:** Allow team managers to define custom keyword override boundaries without adjusting Python `_rule_based_classify` logic.
 
 ---
-
-## 🏁 Conclusion
-
-This system demonstrates how an event-driven approach can improve incident response efficiency, reduce downtime, and provide better operational visibility in DevOps environments.
+*Built with ❤️ by Batch-06 during an 24-hour  NT Hackathon Sprint.*

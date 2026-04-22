@@ -30,11 +30,14 @@ const STATUS_COPY = {
   resolved: { label: 'Resolved', note: 'Closed and stabilized' },
 };
 
-function IncidentDetailsSidebar({ incident, onClose }) {
+function IncidentDetailsSidebar({ incident, onClose, users = [] }) {
   if (!incident) return null;
 
   const sevKey = (incident.severity || 'low').toLowerCase();
   const statKey = (incident.status || 'new').toLowerCase().replace('open', 'new');
+  
+  const assignedUserObj = users.find(u => u.id === incident.assigned_user);
+  const assigneeName = assignedUserObj ? assignedUserObj.name : 'Unassigned';
   const severityMeta = SEVERITY_COPY[sevKey] || SEVERITY_COPY.low;
   const statusMeta = STATUS_COPY[statKey] || STATUS_COPY.new;
 
@@ -75,7 +78,7 @@ function IncidentDetailsSidebar({ incident, onClose }) {
   }, [incident]);
 
   const detailItems = [
-    { label: 'Assignment', value: incident.assigned_to || incident.user_name || 'Unassigned' },
+    { label: 'Assignment', value: assigneeName },
     { label: 'Source', value: incident.source || 'Unknown source' },
     { label: 'Created', value: formatTime(incident.created_at) },
     { label: 'Last update', value: formatTime(incident.updated_at) },

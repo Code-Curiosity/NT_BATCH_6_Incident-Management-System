@@ -2,7 +2,10 @@ import './StatsBar.css';
 
 function StatsBar({ incidents }) {
   const total = incidents.length;
-  const critical = incidents.filter((incident) => (incident.severity || '').toLowerCase() === 'critical').length;
+  const critical = incidents.filter((incident) => 
+    (incident.severity || '').toLowerCase() === 'critical' && 
+    (incident.status || '').toLowerCase() !== 'resolved'
+  ).length;
   const open = incidents.filter((incident) => (incident.status || '').toLowerCase() !== 'resolved').length;
   const resolved = incidents.filter((incident) => (incident.status || '').toLowerCase() === 'resolved').length;
 
