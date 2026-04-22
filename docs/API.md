@@ -25,14 +25,14 @@ http://localhost:8000
 ### Alerts
 | Method | Endpoint              | Description                          |
 |--------|-----------------------|--------------------------------------|
-| POST   | `/api/alerts/ingest`  | Ingest alert → auto-create incident  |
+| POST   | `/api/alerts`        | Ingest alert → auto-create incident  |
 
 ### WebSocket
 - `ws://localhost:8000/ws` → Real-time incident updates
 
 ## Alert Ingestion Example
 ```json
-POST /api/alerts/ingest
+POST /api/alerts
 {
   "type": "server down",
   "message": "Production server web-01 is unreachable",
@@ -46,6 +46,13 @@ POST /api/alerts/ingest
 NEW → ACKNOWLEDGED → RESOLVED
          ↘ ESCALATED ↗
 ```
+
+## Deliverables Status:
+- ✅ Gemini AI Classification Engine
+- ✅ Multi-team Automatic Routing
+- ✅ 3-Strike SLA Escalation Logic
+- ✅ Real-time WebSocket Dashboard
+- ✅ Automated Audit Logging
 
 ## Severity Levels
 - `critical` — system down, data loss

@@ -93,10 +93,13 @@ function buildCsv(incidents) {
 
 function buildSummaryText(summary) {
   const lines = [
-    'IncidentIQ Operations Report',
+    '==================================================',
+    '🚨 EVENT-DRIVEN INCIDENT MANAGEMENT SYSTEM REPORT',
+    '==================================================',
     `Generated: ${new Date().toLocaleString()}`,
+    '--------------------------------------------------',
     '',
-    `Total incidents: ${summary.totalIncidents}`,
+    '[🚀 OVERALL SNAPSHOT]',
     `Open incidents: ${summary.openIncidents}`,
     `Resolved incidents: ${summary.resolvedIncidents}`,
     `Critical active incidents: ${summary.criticalActive}`,
@@ -104,17 +107,28 @@ function buildSummaryText(summary) {
     `Average close time: ${summary.averageResolutionHours} hrs`,
     `Top weekly assignee: ${summary.topWeeklyAssignee.label} (${summary.topWeeklyAssignee.value})`,
     '',
-    'Severity distribution:',
-    ...summary.severityBreakdown.map((item) => `- ${item.label}: ${item.value}`),
+    '[🔴 SEVERITY BREAKDOWN]',
+    ...(summary.severityBreakdown.length > 0 
+      ? summary.severityBreakdown.map((item) => `- ${item.label}: ${item.value}`)
+      : ['- No severity data recorded']),
     '',
-    'Status distribution:',
-    ...summary.statusBreakdown.map((item) => `- ${item.label}: ${item.value}`),
+    '[🔘 STATUS DISTRIBUTION]',
+    ...(summary.statusBreakdown.length > 0 
+      ? summary.statusBreakdown.map((item) => `- ${item.label}: ${item.value}`)
+      : ['- No status data recorded']),
     '',
-    'Source distribution:',
-    ...summary.sourceBreakdown.map((item) => `- ${item.label}: ${item.value}`),
+    '[📍 SOURCE DISTRIBUTION]',
+    ...(summary.sourceBreakdown.length > 0 
+      ? summary.sourceBreakdown.map((item) => `- ${item.label}: ${item.value}`)
+      : ['- No source data recorded']),
     '',
-    'Top assignments:',
-    ...summary.assignmentBreakdown.slice(0, 5).map((item) => `- ${item.label}: ${item.value}`),
+    '[👤 TOP ASSIGNMENTS]',
+    ...(summary.assignmentBreakdown.length > 0 
+      ? summary.assignmentBreakdown.slice(0, 8).map((item) => `- ${item.label}: ${item.value}`)
+      : ['- No assignments recorded']),
+    '',
+    '--------------------------------------------------',
+    'End of Report.',
   ];
 
   return lines.join('\n');
@@ -529,8 +543,13 @@ function Report() {
             <button type="button" className="report-theme-btn" onClick={toggleTheme}>
               {theme === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19'}
             </button>
-            <button type="button" className="report-download-btn primary" onClick={downloadSummary}>
-              Download Summary
+            <button 
+              type="button" 
+              className="report-download-btn primary" 
+              onClick={downloadSummary}
+              disabled={loading || incidents.length === 0}
+            >
+              {loading ? 'Processing...' : 'Download Summary'}
             </button>
             <div className="report-dropdown" ref={exportMenuRef}>
               <button
