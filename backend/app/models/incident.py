@@ -12,8 +12,9 @@ class Incident(Base):
     
     severity = Column(Enum('CRITICAL', 'HIGH', 'MEDIUM', 'LOW', name='incident_severities'), nullable=False)
     incident_type = Column(Enum('INFRASTRUCTURE', 'APPLICATION', 'PLATFORM', 'SECURITY', name='incident_types'), nullable=False)
-    status = Column(Enum('OPEN', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED', name='incident_statuses'), default='OPEN')
+    status = Column(Enum('OPEN', 'ACKNOWLEDGED', 'ESCALATED', 'IN_PROGRESS', 'RESOLVED', name='incident_statuses'), default='OPEN')
     
+    source = Column(String(100))
     assigned_team = Column(Integer, ForeignKey("teams.id"))
     assigned_user = Column(Integer, ForeignKey("users.id"))
     
@@ -30,6 +31,10 @@ class Incident(Base):
     updated_at = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
     resolved_at = Column(TIMESTAMP, nullable=True)
 
+    def _iso(self, dt):
+        """Return ISO string with Z suffix so the browser knows it's UTC."""
+        return dt.isoformat() + "Z" if dt else None
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -39,13 +44,15 @@ class Incident(Base):
             "severity": self.severity,
             "incident_type": self.incident_type,
             "status": self.status,
+            "source": self.source,
             "assigned_team": self.assigned_team,
             "assigned_user": self.assigned_user,
             "priority_score": self.priority_score,
-            "sla_deadline": self.sla_deadline.isoformat() if self.sla_deadline else None,
-            "ack_deadline": self.ack_deadline.isoformat() if self.ack_deadline else None,
+            "sla_deadline": self._iso(self.sla_deadline),
+            "ack_deadline": self._iso(self.ack_deadline),
             "escalation_count": self.escalation_count,
             "affected_services": self.affected_services,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_at": self._iso(self.created_at),
+            "updated_at": self._iso(self.updated_at),
+            "resolved_at": self._iso(self.resolved_at),
         }

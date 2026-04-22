@@ -38,7 +38,7 @@ const DONUT_PALETTES = {
 };
 
 function formatLabel(value) {
-  return value
+  return String(value)
     .split(/[_\s-]+/)
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -156,11 +156,19 @@ function buildTrendData(incidents, dateKey) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // Helper to reliably get YYYY-MM-DD in the local timezone
+  const getLocalDateKey = (dateObj) => {
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   for (let index = REPORT_DAYS - 1; index >= 0; index -= 1) {
     const day = new Date(today);
     day.setDate(today.getDate() - index);
     days.push({
-      key: day.toISOString().slice(0, 10),
+      key: getLocalDateKey(day),
       label: day.toLocaleDateString([], { weekday: 'short' }),
       value: 0,
     });
@@ -173,7 +181,7 @@ function buildTrendData(incidents, dateKey) {
       return;
     }
 
-    const key = new Date(dateValue).toISOString().slice(0, 10);
+    const key = getLocalDateKey(new Date(dateValue));
     if (lookup.has(key)) {
       lookup.get(key).value += 1;
     }
@@ -431,11 +439,32 @@ function Report() {
     };
   }, []);
 
+  const [users, setUsers] = useState([]);
+
   const fetchIncidents = async () => {
     try {
-      const response = await fetch('/api/incidents/');
-      const data = await response.json();
-      setIncidents(data);
+      const [incRes, usersRes] = await Promise.all([
+        fetch('/api/incidents/'),
+        fetch('/api/users/')
+      ]);
+      const data = await incRes.json();
+      const userData = await usersRes.json();
+      setUsers(userData);
+
+      const raw = Array.isArray(data) ? data : (data.incidents || []);
+      const normalized = raw.map(inc => {
+        // Find the user to map ID -> Name
+        const assignee = userData.find(u => u.id === inc.assigned_user || u.id === inc.assigned_to);
+        const assigneeName = assignee ? assignee.name : (inc.assigned_user || 'unassigned');
+        
+        return {
+          ...inc,
+          severity: (inc.severity || 'medium').toLowerCase(),
+          status: (inc.status || 'new').toLowerCase().replace('open', 'new'),
+          assigned_to: assigneeName,
+        };
+      });
+      setIncidents(normalized);
     } catch (error) {
       console.error('Failed to fetch report incidents:', error);
     } finally {

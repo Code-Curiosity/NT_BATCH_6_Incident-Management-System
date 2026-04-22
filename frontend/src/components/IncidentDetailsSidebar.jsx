@@ -1,5 +1,5 @@
+import React, { useState, useEffect } from 'react';
 import './IncidentDetailsSidebar.css';
-
 const SEVERITY_COPY = {
   critical: {
     badge: 'Critical',
@@ -33,8 +33,10 @@ const STATUS_COPY = {
 function IncidentDetailsSidebar({ incident, onClose }) {
   if (!incident) return null;
 
-  const severityMeta = SEVERITY_COPY[incident.severity] || SEVERITY_COPY.low;
-  const statusMeta = STATUS_COPY[incident.status] || STATUS_COPY.new;
+  const sevKey = (incident.severity || 'low').toLowerCase();
+  const statKey = (incident.status || 'new').toLowerCase().replace('open', 'new');
+  const severityMeta = SEVERITY_COPY[sevKey] || SEVERITY_COPY.low;
+  const statusMeta = STATUS_COPY[statKey] || STATUS_COPY.new;
 
   const formatTime = (iso) => {
     if (!iso) return '-';
@@ -61,32 +63,36 @@ function IncidentDetailsSidebar({ incident, onClose }) {
     return `${days}d ago`;
   };
 
+  const [logs, setLogs] = useState([]);
+
+  useEffect(() => {
+    if (incident?.id) {
+      fetch(`/api/incidents/${incident.id}`)
+        .then((res) => res.json())
+        .then((data) => setLogs(data.logs || []))
+        .catch(err => console.error("Could not fetch logs:", err));
+    }
+  }, [incident]);
+
   const detailItems = [
-    { label: 'Assignment', value: incident.assigned_to || 'Unassigned' },
+    { label: 'Assignment', value: incident.assigned_to || incident.user_name || 'Unassigned' },
     { label: 'Source', value: incident.source || 'Unknown source' },
     { label: 'Created', value: formatTime(incident.created_at) },
     { label: 'Last update', value: formatTime(incident.updated_at) },
   ];
 
-  const timelineItems = [
+  const timelineItems = logs.length > 0 ? logs.map(log => ({
+    label: log.action.charAt(0) + log.action.slice(1).toLowerCase(),
+    time: formatTime(log.timestamp),
+    note: log.details,
+    tone: log.action.toLowerCase(),
+  })) : [
     {
       label: 'Signal received',
       time: formatTime(incident.created_at),
       note: `Incident opened ${formatRelativeTime(incident.created_at)}`,
       tone: 'created',
-    },
-    {
-      label: 'Current state',
-      time: statusMeta.label,
-      note: statusMeta.note,
-      tone: incident.status,
-    },
-    {
-      label: 'Latest activity',
-      time: formatTime(incident.updated_at),
-      note: `Updated ${formatRelativeTime(incident.updated_at)}`,
-      tone: 'updated',
-    },
+    }
   ];
 
   return (
@@ -99,7 +105,7 @@ function IncidentDetailsSidebar({ incident, onClose }) {
       />
 
       <aside
-        className={`details-sidebar severity-${incident.severity}`}
+        className={`details-sidebar severity-${sevKey}`}
         aria-label={`Details for incident ${incident.id}`}
       >
         <div className="details-hero">
@@ -129,10 +135,10 @@ function IncidentDetailsSidebar({ incident, onClose }) {
           </div>
 
           <div className="details-pill-row">
-            <span className={`details-pill severity ${incident.severity}`}>
+            <span className={`details-pill severity ${sevKey}`}>
               {severityMeta.badge}
             </span>
-            <span className={`details-pill status ${incident.status}`}>
+            <span className={`details-pill status ${statKey}`}>
               {statusMeta.label}
             </span>
             <span className="details-pill neutral">

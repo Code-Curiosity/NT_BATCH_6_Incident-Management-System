@@ -2,9 +2,9 @@ import './StatsBar.css';
 
 function StatsBar({ incidents }) {
   const total = incidents.length;
-  const critical = incidents.filter((incident) => incident.severity === 'critical').length;
-  const open = incidents.filter((incident) => incident.status !== 'resolved').length;
-  const resolved = incidents.filter((incident) => incident.status === 'resolved').length;
+  const critical = incidents.filter((incident) => (incident.severity || '').toLowerCase() === 'critical').length;
+  const open = incidents.filter((incident) => (incident.status || '').toLowerCase() !== 'resolved').length;
+  const resolved = incidents.filter((incident) => (incident.status || '').toLowerCase() === 'resolved').length;
 
   const stats = [
     { label: 'Total Incidents', value: total, className: 'stat-total', icon: '\uD83D\uDCCB' },

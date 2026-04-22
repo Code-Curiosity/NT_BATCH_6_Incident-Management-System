@@ -1,22 +1,48 @@
 import { useState } from 'react';
 import './IncidentCard.css';
 
-function IncidentCard({ incident, onAction, teams=[], users=[] }) {
-  const { id, title, description, severity, status, source, created_at } = incident;
+const STATUS_FLOW = [
+  {
+    key: 'open',
+    label: 'New',
+    action: null,
+    isAvailable: () => false,
+  },
+  {
+    key: 'acknowledged',
+    label: 'Acknowledge',
+    action: 'acknowledge',
+    isAvailable: (s) => s === 'open' || s === 'new',
+  },
+  {
+    key: 'escalated',
+    label: 'Escalate',
+    action: 'escalate',
+    isAvailable: (s) => ['open', 'new', 'acknowledged'].includes(s),
+  },
+  {
+    key: 'resolved',
+    label: 'Resolve',
+    action: 'resolve',
+    isAvailable: (s) => s !== 'resolved',
+  },
+];
 
-function IncidentCard({ incident, onAction, onViewDetails }) {
+function IncidentCard({ incident, onAction, onViewDetails, teams = [], users = [] }) {
   const {
     id,
     title,
     description,
     severity,
     status,
-    assigned_to,
     source,
     created_at,
   } = incident;
 
   const [pendingAction, setPendingAction] = useState(null);
+
+  const severityLower = severity ? severity.toLowerCase() : 'medium';
+  const statusLower = status ? status.toLowerCase() : 'new';
 
   const formatTime = (iso) => {
     if (!iso) return '-';
@@ -25,7 +51,6 @@ function IncidentCard({ incident, onAction, onViewDetails }) {
 
   const handleStatusAction = async (action) => {
     if (!action || pendingAction) return;
-
     setPendingAction(action);
     try {
       await onAction(id, action);
@@ -34,13 +59,25 @@ function IncidentCard({ incident, onAction, onViewDetails }) {
     }
   };
 
+  // Resolve display names from teams/users arrays
+  const teamName = teams.find(t => t.id === incident.assigned_team)?.name
+    || incident.team_name || 'Unassigned';
+  
+  const matchedUser = users.find(u => u.id === incident.assigned_user);
+  let userName = matchedUser?.name || incident.user_name || 'Unassigned';
+  if (matchedUser?.role === 'lead') {
+    userName += ' (Lead)';
+  }
+
   return (
-    <div className={`incident-card severity-${severity}`}>
+    <div className={`incident-card severity-${severityLower}`}>
       <div className="card-header">
-        <span className={`severity-badge ${severity}`}>
-          {severity.toUpperCase()}
+        <span className={`severity-badge ${severityLower}`}>
+          {severity ? severity.toUpperCase() : 'MEDIUM'}
         </span>
-        <span className={`status-badge ${status}`}>{status}</span>
+        <span className={`status-badge ${statusLower}`}>
+          {status ? status.toUpperCase() : 'OPEN'}
+        </span>
       </div>
 
       <h3 className="card-title">{title}</h3>
@@ -51,14 +88,14 @@ function IncidentCard({ incident, onAction, onViewDetails }) {
           <button
             key={step.key}
             className={`status-flow-chip ${
-              status === step.key
+              statusLower === step.key
                 ? 'current'
-                : step.isAvailable(status)
+                : step.isAvailable(statusLower)
                 ? 'available'
                 : 'inactive'
             }`}
             onClick={() => handleStatusAction(step.action)}
-            disabled={pendingAction || !step.isAvailable(status)}
+            disabled={pendingAction || !step.isAvailable(statusLower)}
           >
             {pendingAction === step.action ? 'Updating...' : step.label}
           </button>
@@ -68,30 +105,30 @@ function IncidentCard({ incident, onAction, onViewDetails }) {
       <div className="card-meta">
         <div className="meta-item">
           <span className="meta-label">Team</span>
-          <span className="meta-value">{teams.find(t => t.id === incident.assigned_team)?.name || incident.team_name || 'Unassigned'}</span>
+          <span className="meta-value">{teamName}</span>
         </div>
         <div className="meta-item">
           <span className="meta-label">Assignee</span>
-          <span className="meta-value">{users.find(u => u.id === incident.assigned_user)?.name || incident.user_name || 'Unassigned'}</span>
-        </div>
-        <div className="meta-item">
-          <span className="meta-label">Assigned to</span>
-          <span className="meta-value">{ 'Person Name'}</span>
+          <span className="meta-value">{userName}</span>
         </div>
         <div className="meta-item">
           <span className="meta-label">Source</span>
           <span className="meta-value">{source || '-'}</span>
         </div>
         <div className="meta-item">
-          <span className="meta-label">Created</span>
+          <span className="meta-label">Created At</span>
           <span className="meta-value">{formatTime(created_at)}</span>
+        </div>
+        <div className="meta-item">
+          <span className="meta-label">Updated At</span>
+          <span className="meta-value">{incident.updated_at ? formatTime(incident.updated_at) : formatTime(created_at)}</span>
         </div>
       </div>
 
       <div className="card-actions">
         <button
           className="action-btn view-details"
-          onClick={() => onViewDetails(incident)}
+          onClick={() => onViewDetails && onViewDetails(incident)}
         >
           View Details
         </button>

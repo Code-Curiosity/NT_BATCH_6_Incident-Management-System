@@ -52,6 +52,7 @@ async def ingest_alert(payload: AlertPayload, background_tasks: BackgroundTasks,
         priority_score=classification.get("priority_score", 50),
         affected_services=classification.get("affected_services", []),
         assigned_team=team_id,
+        source=payload.source,
         status="OPEN"
     )
     db.add(incident)

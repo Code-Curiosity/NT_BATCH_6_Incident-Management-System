@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 from app.database import SessionLocal
-from app.models import Incident, IncidentAssignmentQueue
+from app.models import Incident, IncidentAssignmentQueue, IncidentLog
 from app.services.assignment import try_assign_incident
 
 def run_ack_checker():
@@ -14,7 +14,8 @@ def run_ack_checker():
             # Find OPEN incidents that passed their ack deadline
             timed_out_incidents = db.query(Incident).filter(
                 Incident.status == "OPEN",
-                Incident.ack_deadline < now
+                Incident.ack_deadline < now,
+                Incident.assigned_user.isnot(None)
             ).all()
             
             for inc in timed_out_incidents:
@@ -31,6 +32,7 @@ def run_ack_checker():
                 # Unassign current
                 inc.assigned_user = None
                 inc.escalation_count += 1
+                db.add(IncidentLog(incident_id=inc.id, action="TIMEOUT", details="Assignee failed to acknowledge in time. Escalated and reassigning."))
                 db.commit()
                 
                 # Try to assign next member
@@ -40,4 +42,4 @@ def run_ack_checker():
         except Exception as e:
             print(f"[Task Error] run_ack_checker: {e}")
             
-        time.sleep(60)
+        time.sleep(25)
