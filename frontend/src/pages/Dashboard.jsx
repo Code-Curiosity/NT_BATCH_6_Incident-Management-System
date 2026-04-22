@@ -14,6 +14,16 @@ function Dashboard() {
   const [selectedTeam, setSelectedTeam] = useState('all');
   const [selectedUser, setSelectedUser] = useState('all');
   const [selectedIncident, setSelectedIncident] = useState(null);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
+  useEffect(() => {
+    document.body.className = `${theme}-theme`;
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   useEffect(() => {
     fetchInitialData();
@@ -96,6 +106,29 @@ function Dashboard() {
               Incident Management
             </h1>
             <p className="header-subtitle">Real-time DevOps incident tracking & resolution</p>
+          </div>
+          <div className="header-actions" style={{ display: 'flex', gap: '8px' }}>
+            <button 
+              type="button" 
+              onClick={toggleTheme}
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '999px',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-bg-card)',
+                color: 'var(--color-text-secondary)',
+                boxShadow: 'var(--shadow-sm)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.2rem',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
           </div>
         </header>
 

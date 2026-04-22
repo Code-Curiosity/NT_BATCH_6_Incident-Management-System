@@ -26,8 +26,14 @@ class IncidentUpdate(BaseModel):
 router = APIRouter()
 
 @router.get("/")
-def get_incidents(db: Session = Depends(get_db)):
-    incidents = db.query(Incident).order_by(Incident.created_at.desc()).all()
+def get_incidents(team_id: Optional[int] = None, user_id: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(Incident)
+    if team_id is not None:
+        query = query.filter(Incident.assigned_team == team_id)
+    if user_id is not None:
+        query = query.filter(Incident.assigned_user == user_id)
+        
+    incidents = query.order_by(Incident.created_at.desc()).all()
     return {"incidents": [i.to_dict() for i in incidents]}
 
 @router.get("/{incident_id}")
