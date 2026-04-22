@@ -1,27 +1,8 @@
 import { useState } from 'react';
 import './IncidentCard.css';
 
-const STATUS_FLOW = [
-  {
-    key: 'acknowledged',
-    label: 'Acknowledge',
-    action: 'acknowledge',
-    isAvailable: (currentStatus) => currentStatus === 'new',
-  },
-  {
-    key: 'escalated',
-    label: 'Escalate',
-    action: 'escalate',
-    isAvailable: (currentStatus) =>
-      currentStatus === 'new' || currentStatus === 'acknowledged',
-  },
-  {
-    key: 'resolved',
-    label: 'Resolve',
-    action: 'resolve',
-    isAvailable: (currentStatus) => currentStatus !== 'resolved',
-  },
-];
+function IncidentCard({ incident, onAction, teams=[], users=[] }) {
+  const { id, title, description, severity, status, source, created_at } = incident;
 
 function IncidentCard({ incident, onAction, onViewDetails }) {
   const {
@@ -86,8 +67,12 @@ function IncidentCard({ incident, onAction, onViewDetails }) {
 
       <div className="card-meta">
         <div className="meta-item">
-          <span className="meta-label">Assigned</span>
-          <span className="meta-value">{assigned_to || 'Unassigned'}</span>
+          <span className="meta-label">Team</span>
+          <span className="meta-value">{teams.find(t => t.id === incident.assigned_team)?.name || incident.team_name || 'Unassigned'}</span>
+        </div>
+        <div className="meta-item">
+          <span className="meta-label">Assignee</span>
+          <span className="meta-value">{users.find(u => u.id === incident.assigned_user)?.name || incident.user_name || 'Unassigned'}</span>
         </div>
         <div className="meta-item">
           <span className="meta-label">Assigned to</span>

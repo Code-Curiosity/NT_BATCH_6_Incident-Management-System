@@ -1,16 +1,8 @@
-"""
-Alert Simulator Script.
-Generates sample alerts to test the incident management pipeline.
-Run: python scripts/simulate_alerts.py
-"""
-
 import requests
 import time
-import random
 
-API_URL = "http://localhost:8000/api/alerts/ingest"
+API_URL = "http://localhost:8000/api/alerts"
 
-# Sample alerts for testing
 SAMPLE_ALERTS = [
     # Infrastructure - Critical
     {
@@ -79,38 +71,39 @@ SAMPLE_ALERTS = [
     },
 ]
 
-
 def send_alert(alert):
     """Send a single alert to the ingestion API."""
     try:
         response = requests.post(API_URL, json=alert)
         result = response.json()
-        incident = result.get("incident", {})
-        print(
-            f"✅ [{incident.get('severity', '?').upper():8}] "
-            f"#{incident.get('id', '?')} {alert['type']} "
-            f"→ {incident.get('assigned_to', '?')}"
-        )
+        
+        if response.status_code == 200:
+            classification = result.get("classification", {})
+            print(
+                f"✅ [{classification.get('severity', '?').upper():8}] "
+                f"#{result.get('incident_id', '?')} {alert.get('type', 'Alert')} "
+                f"→ Team #{result.get('assigned_team', '?')} User #{result.get('assigned_user', '?')}"
+            )
+        else:
+             print(f"❌ Failed to ingest alert: {result}")
     except requests.exceptions.ConnectionError:
         print("❌ Cannot connect to backend. Is the server running on port 8000?")
     except Exception as e:
         print(f"❌ Error: {e}")
 
-
 def main():
     print("=" * 60)
     print("🚨 INCIDENT MANAGEMENT - ALERT SIMULATOR")
     print("=" * 60)
-    print(f"Sending {len(SAMPLE_ALERTS)} sample alerts...\n")
+    print(f"Sending {len(SAMPLE_ALERTS)} sample alerts to Gemini classification API...\n")
 
     for alert in SAMPLE_ALERTS:
         send_alert(alert)
-        time.sleep(0.5)  # Small delay between alerts
+        time.sleep(2)  # Delay between alerts to observe WebSockets on Frontend
 
     print(f"\n{'=' * 60}")
-    print("✅ All sample alerts sent! Check the dashboard.")
+    print("✅ All sample alerts sent! Check the React dashboard.")
     print("=" * 60)
-
 
 if __name__ == "__main__":
     main()

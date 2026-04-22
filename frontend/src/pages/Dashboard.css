@@ -342,71 +342,17 @@
 
 /* ===== CONTROLS ===== */
 .dashboard-controls {
-  margin-bottom: var(--space-6);
+  margin-bottom: 32px;
+}
+
+.filter-group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: 0 0 var(--space-5);
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.search-container {
-  display: flex;
-  justify-content: flex-start;
-}
-
-.search-wrapper {
-  position: relative;
-  width: 100%;
-  max-width: 850px;
-}
-
-.search-input {
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
-  padding-right: var(--space-10);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
+  gap: 20px;
   background: var(--color-bg-card);
-  color: var(--color-text-primary);
-  font-size: 0.875rem;
-  transition: all var(--transition-fast);
-  box-shadow: var(--shadow-sm);
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), var(--shadow-md);
-}
-
-.search-input::placeholder {
-  color: var(--color-text-muted);
-}
-
-.clear-search-btn {
-  position: absolute;
-  right: var(--space-3);
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: var(--color-text-muted);
-  font-size: 1.125rem;
-  cursor: pointer;
-  padding: var(--space-1);
-  border-radius: var(--radius-sm);
-  transition: all var(--transition-fast);
-}
-
-.clear-search-btn:hover {
-  color: var(--color-text-primary);
-  background: var(--color-bg-hover);
-}
-
-.controls-row {
-  display: flex;
-  width: 100%;
+  padding: 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
 }
 
 .filter-tabs {
@@ -419,11 +365,50 @@
   gap: 0;
 }
 
+.dropdown-filters {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.filter-select-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.filter-select-wrapper label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.filter-select-wrapper select {
+  background: var(--color-bg-body);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.filter-select-wrapper select:focus {
+  border-color: var(--color-accent);
+}
+
 .filter-tab {
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  background: transparent;
+  background: var(--color-bg-body);
   color: var(--color-text-secondary);
   font-size: 0.8125rem;
   font-weight: 500;

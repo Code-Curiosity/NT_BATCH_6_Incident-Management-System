@@ -7,28 +7,54 @@ import './Dashboard.css';
 
 function Dashboard() {
   const [incidents, setIncidents] = useState([]);
-  const [selectedIncident, setSelectedIncident] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('created_at');
-  const [sortOrder, setSortOrder] = useState('desc');
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const [filter, setFilter] = useState('all'); // all, new, acknowledged, escalated, resolved
+  const [selectedTeam, setSelectedTeam] = useState('all');
+  const [selectedUser, setSelectedUser] = useState('all');
 
   useEffect(() => {
-    fetchIncidents();
+    fetchInitialData();
   }, []);
 
   useEffect(() => {
-    document.body.className = `${theme}-theme`;
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    fetchIncidents();
+  }, [filter, selectedTeam, selectedUser]);
+
+  const fetchInitialData = async () => {
+    try {
+      const [teamsRes, usersRes] = await Promise.all([
+        fetch('/api/teams/'),
+        fetch('/api/users/')
+      ]);
+      setTeams(await teamsRes.json());
+      setUsers(await usersRes.json());
+    } catch (error) {
+      console.error('Failed to fetch filter data:', error);
+    }
+  };
 
   const fetchIncidents = async () => {
     try {
-      const response = await fetch('/api/incidents/');
+      setLoading(true);
+      let url = '/api/incidents/?';
+      if (selectedTeam !== 'all') url += `team_id=${selectedTeam}&`;
+      if (selectedUser !== 'all') url += `user_id=${selectedUser}&`;
+      
+      const response = await fetch(url);
       const data = await response.json();
-      setIncidents(data);
+      
+      const fetchedIncidents = data.incidents || data;
+      
+      // Client-side filtering for status since we already have the data
+      // or we could add status to the API. For now, let's keep status filtering client-side
+      // to avoid over-complicating the backend query logic if not needed.
+      const statusFiltered = filter === 'all' 
+        ? fetchedIncidents 
+        : fetchedIncidents.filter(inc => inc.status.toLowerCase() === filter.toLowerCase() || inc.status.toLowerCase() === (filter === 'new' ? 'open' : filter));
+        
+      setIncidents(statusFiltered);
     } catch (error) {
       console.error('Failed to fetch incidents:', error);
     } finally {
@@ -45,199 +71,67 @@ function Dashboard() {
     }
   };
 
-  const resetView = () => {
-    setSearchTerm('');
-    setSortBy('created_at');
-    setSortOrder('desc');
-  };
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  };
-
-  const clearSearch = () => {
-    setSearchTerm('');
-  };
-
-  const showNewIncidents = () => {
-    setFilter('new');
-    resetView();
-  };
-
-  const handleFilterChange = (nextFilter) => {
-    setFilter(nextFilter);
-  };
-
-  const toggleSort = (field) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('desc');
-    }
-  };
-
-  const newIncidents = incidents.filter((i) => i.status === 'new');
-
-  const getPinnedPriority = (incident) =>
-    incident.status === 'new' ? 0 : 1;
-
-  const filteredAndSortedIncidents = incidents
-    .filter((incident) =>
-      filter === 'all'
-        ? true
-        : filter === 'active'
-        ? incident.status !== 'resolved'
-        : incident.status === filter
-    )
-    .filter((incident) =>
-      searchTerm === '' ||
-      incident.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      incident.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      incident.source?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .sort((a, b) => {
-      if (filter === 'all') {
-        const diff = getPinnedPriority(a) - getPinnedPriority(b);
-        if (diff !== 0) return diff;
-      }
-
-      let aValue, bValue;
-
-      switch (sortBy) {
-        case 'severity': {
-          const order = { critical: 4, high: 3, medium: 2, low: 1 };
-          aValue = order[a.severity] || 0;
-          bValue = order[b.severity] || 0;
-          break;
-        }
-        case 'status': {
-          const order = { new: 4, acknowledged: 3, escalated: 2, resolved: 1 };
-          aValue = order[a.status] || 0;
-          bValue = order[b.status] || 0;
-          break;
-        }
-        default:
-          aValue = new Date(a.created_at);
-          bValue = new Date(b.created_at);
-      }
-
-      return sortOrder === 'asc'
-        ? aValue > bValue ? 1 : -1
-        : aValue < bValue ? 1 : -1;
-    });
-
   return (
-    <div className="dashboard-shell">
+    <div className="dashboard">
+      <header className="dashboard-header">
+        <div className="header-content">
+          <h1 className="header-title">
+            <span className="header-icon">🔴</span>
+            Incident Management
+          </h1>
+          <p className="header-subtitle">Real-time DevOps incident tracking & resolution</p>
+        </div>
+      </header>
 
-      {/* LEFT SIDEBAR */}
-      <SideBar
-        newIncidents={newIncidents}
-      />
+      <StatsBar incidents={incidents} />
 
-      {/* MAIN */}
-      <div className="dashboard">
-
-        {/* HEADER */}
-        <header className="dashboard-header">
-          <div className="header-content">
-            <div className="header-main">
-              <div>
-                <p className="header-eyebrow">Incident Response Hub</p>
-                <h1 className="header-title">
-                  <img src="/favicon.png" alt="IncidentIQ" className="header-favicon" />
-                  IncidentIQ
-                </h1>
-              </div>
-
-              <div className="header-actions">
-                <div className="live-badge">
-                  <div className="live-dot"></div>
-                  Live feed
-                </div>
-
-                <button
-                  className={`bell-btn ${filter === 'new' ? 'active' : ''}`}
-                  onClick={showNewIncidents}
-                >
-                  🔔
-                  {newIncidents.length > 0 && (
-                    <span className="notification-badge">
-                      {newIncidents.length}
-                    </span>
-                  )}
-                </button>
-
-                <button className="theme-toggle-btn" onClick={toggleTheme}>
-                  {theme === 'dark' ? '☀️' : '🌙'}
-                </button>
-              </div>
-            </div>
-
-            <p className="header-subtitle">
-              Track incidents and respond in real time.
-            </p>
-          </div>
-        </header>
-
-        <StatsBar incidents={incidents} />
-
-        {/* CONTROLS */}
-        <div className="dashboard-controls">
-
-          <div className="search-container">
-            <div className="search-wrapper">
-              <input
-                type="text"
-                placeholder="Search incidents..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
-              {searchTerm && (
-                <button className="clear-search-btn" onClick={clearSearch}>
-                  ✕
-                </button>
-              )}
-            </div>
+      <div className="dashboard-controls">
+        <div className="filter-group">
+          <div className="filter-tabs">
+            {['all', 'new', 'acknowledged', 'escalated', 'resolved'].map((status) => (
+              <button
+                key={status}
+                className={`filter-tab ${filter === status ? 'active' : ''}`}
+                onClick={() => setFilter(status)}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </button>
+            ))}
           </div>
 
-          <div className="controls-row">
-            <div className="filter-tabs">
-              {['all', 'new', 'acknowledged', 'escalated', 'resolved'].map((s) => (
-                <button
-                  key={s}
-                  className={`filter-tab ${filter === s ? 'active' : ''}`}
-                  onClick={() => handleFilterChange(s)}
-                >
-                  {s}
-                </button>
-              ))}
+          <div className="dropdown-filters">
+            <div className="filter-select-wrapper">
+              <label htmlFor="team-filter">Team</label>
+              <select 
+                id="team-filter"
+                value={selectedTeam} 
+                onChange={(e) => {
+                  setSelectedTeam(e.target.value);
+                  setSelectedUser('all'); // Reset user when team changes
+                }}
+              >
+                <option value="all">All Teams</option>
+                {teams.map(team => (
+                  <option key={team.id} value={team.id}>{team.name}</option>
+                ))}
+              </select>
+            </div>
 
-              <div className="sort-controls">
-                <span className="sort-label">Sort by:</span>
-
-                <button
-                  className={`sort-btn ${sortBy === 'created_at' ? 'active' : ''}`}
-                  onClick={() => toggleSort('created_at')}
-                >
-                  Date
-                </button>
-
-                <button
-                  className={`sort-btn ${sortBy === 'severity' ? 'active' : ''}`}
-                  onClick={() => toggleSort('severity')}
-                >
-                  Severity
-                </button>
-
-                <button
-                  className={`sort-btn ${sortBy === 'status' ? 'active' : ''}`}
-                  onClick={() => toggleSort('status')}
-                >
-                  Status
-                </button>
-              </div>
+            <div className="filter-select-wrapper">
+              <label htmlFor="user-filter">User</label>
+              <select 
+                id="user-filter"
+                value={selectedUser} 
+                onChange={(e) => setSelectedUser(e.target.value)}
+              >
+                <option value="all">All Users</option>
+                {users
+                  .filter(user => selectedTeam === 'all' || user.team_id === parseInt(selectedTeam))
+                  .map(user => (
+                    <option key={user.id} value={user.id}>{user.name}</option>
+                  ))
+                }
+              </select>
             </div>
           </div>
         </div>
@@ -269,14 +163,23 @@ function Dashboard() {
         </main>
       </div>
 
-      {/* RIGHT DETAILS SIDEBAR */}
-      {selectedIncident && (
-        <IncidentDetailsSidebar
-          incident={selectedIncident}
-          onClose={() => setSelectedIncident(null)}
-        />
-      )}
-
+      <main className="incident-grid">
+        {loading ? (
+          <div className="loading-state">Loading incidents...</div>
+        ) : incidents.length === 0 ? (
+          <div className="empty-state">No incidents found.</div>
+        ) : (
+          incidents.map((incident) => (
+            <IncidentCard
+              key={incident.id}
+              incident={incident}
+              onAction={handleAction}
+              teams={teams}
+              users={users}
+            />
+          ))
+        )}
+      </main>
     </div>
   );
 }
